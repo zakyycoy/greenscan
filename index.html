@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GreenScan AI - Smart Trash Classifier</title>
+    
+    <!-- Google Fonts & Font Awesome Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --card-bg: rgba(23, 32, 54, 0.75);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            
+            /* Color Codes for Waste Types */
+            --color-organik: #10b981;
+            --color-anorganik: #3b82f6;
+            --color-b3: #ef4444;
+            --color-default: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at 50% -20%, #1e293b, var(--bg-dark));
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 950px;
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        header .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--color-organik);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        /* Top Control Bar */
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .btn-camera {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            font-size: 1rem;
+            font-weight: 700;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4);
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-camera:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px -5px rgba(16, 185, 129, 0.5);
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        }
+
+        .btn-camera:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Grid Layout */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 28px;
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Camera Box */
+        .camera-card {
+            background: rgba(11, 15, 25, 0.6);
+            border: 2px dashed rgba(255, 255, 255, 0.12);
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 320px;
+            position: relative;
+        }
+
+        #webcam-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        #webcam-container canvas {
+            border-radius: 14px;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+            max-width: 100%;
+            height: auto !important;
+        }
+
+        .camera-placeholder {
+            text-align: center;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .camera-placeholder i {
+            font-size: 3rem;
+            color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Top Detected Badge */
+        .top-match-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .top-match-title {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .top-match-value {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Results Card */
+        .results-card {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .label-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            padding: 16px;
+            border-radius: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .label-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+
+        .label-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 20px;
+            transition: width 0.25s ease-out, background-color 0.3s ease;
+            background: var(--color-default);
+        }
+
+        /* Category Info Legend */
+        .legend-box {
+            margin-top: 28px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            .legend-box {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .legend-item {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .legend-item strong {
+            display: block;
+            margin-bottom: 2px;
+            font-size: 0.85rem;
+        }
+
+        footer {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <!-- Header -->
+        <header>
+            <div class="brand-badge"><i class="fa-solid fa-leaf"></i> AI Vision Detector</div>
+            <h1>Klasifikasi Sampah Pintar</h1>
+            <p>Pindai sampah menggunakan webcam untuk mendeteksi jenisnya secara otomatis</p>
+        </header>
+
+        <!-- Button -->
+        <div class="controls">
+            <button class="btn-camera" id="start-btn" onclick="init()">
+                <i class="fa-solid fa-video"></i> Aktifkan Kamera
+            </button>
+        </div>
+
+        <div class="content-grid">
+            <!-- Left Side: Camera Area -->
+            <div class="camera-card">
+                <div id="camera-placeholder" class="camera-placeholder">
+                    <i class="fa-solid fa-camera-retro"></i>
+                    <span>Klik tombol di atas untuk memulai akses kamera</span>
+                </div>
+                <div id="webcam-container"></div>
+            </div>
+
+            <!-- Right Side: Classification Results -->
+            <div class="results-card">
+                <!-- Highlight Utama -->
+                <div class="top-match-card">
+                    <span class="top-match-title">Terdeteksi Utama</span>
+                    <span class="top-match-value" id="top-result">-</span>
+                </div>
+
+                <!-- Detail List Prediksi -->
+                <div id="label-container">
+                    <div class="camera-placeholder" style="padding: 20px 0;">
+                        <span style="font-size: 0.85rem;">Menunggu input kamera...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Legend / Info Tambahan -->
+        <div class="legend-box">
+            <div class="legend-item">
+                <strong style="color: var(--color-organik);"><i class="fa-solid fa-seedling"></i> Organik</strong>
+                Sisa Makanan, Daun, Buah
+            </div>
+            <div class="legend-item">
+                <strong style="color: var(--color-anorganik);"><i class="fa-solid fa-bottle-water"></i> Anorganik</strong>
+                Plastik, Botol, Kertas, Kaleng
+            </div>
+            <div class="legend-item">
+                <strong style="color: var(--color-b3);"><i class="fa-solid fa-triangle-exclamation"></i> Sampah B3</strong>
+                Baterai, Lampu, Elektronik, Obat
+            </div>
+        </div>
+
+        <footer>
+            GreenScan AI &copy; 2026 — Powered by TensorFlow.js
+        </footer>
+    </div>
+
+    <!-- Scripts CDN TensorFlow & Teachable Machine -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+    <script type="text/javascript">
+        // Path lokasi model (Lokal: "./models/" atau URL Teachable Machine)
+        const MODEL_URL_PATH = "./models/"; 
+
+        let model, webcam, labelContainer, maxPredictions;
+        let isStarted = false;
+        let animFrameId = null;
+
+        // Mendapatkan konfigurasi warna & ikon berdasarkan nama kelas
+        function getCategoryStyle(className) {
+            const name = className.toLowerCase().trim();
+
+            if (name.includes("organik") && !name.includes("anorganik")) {
+                return {
+                    color: "var(--color-organik)",
+                    icon: '<i class="fa-solid fa-seedling"></i>'
+                };
+            } else if (name.includes("anorganik")) {
+                return {
+                    color: "var(--color-anorganik)",
+                    icon: '<i class="fa-solid fa-bottle-water"></i>'
+                };
+            } else if (name.includes("b3")) {
+                return {
+                    color: "var(--color-b3)",
+                    icon: '<i class="fa-solid fa-triangle-exclamation"></i>'
+                };
+            }
+
+            return {
+                color: "var(--color-default)",
+                icon: '<i class="fa-solid fa-box-open"></i>'
+            };
+        }
+
+        async function init() {
+            if (isStarted) return;
+
+            const startBtn = document.getElementById("start-btn");
+            startBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Memuat Model...`;
+            startBtn.disabled = true;
+
+            const baseUrl = MODEL_URL_PATH.endsWith("/") ? MODEL_URL_PATH : MODEL_URL_PATH + "/";
+            const modelURL = baseUrl + "model.json";
+            const metadataURL = baseUrl + "metadata.json";
+
+            try {
+                // Memuat Model AI
+                model = await tmImage.load(modelURL, metadataURL);
+                maxPredictions = model.getTotalClasses();
+
+                // Setup Webcam
+                const flip = true; 
+                webcam = new tmImage.Webcam(280, 280, flip);
+                await webcam.setup();
+                await webcam.play();
+
+                // Loop prediksi
+                animFrameId = window.requestAnimationFrame(loop);
+
+                // Update UI setelah kamera aktif
+                document.getElementById("camera-placeholder").style.display = "none";
+                
+                const webcamContainer = document.getElementById("webcam-container");
+                webcamContainer.innerHTML = "";
+                webcamContainer.appendChild(webcam.canvas);
+
+                labelContainer = document.getElementById("label-container");
+                labelContainer.innerHTML = "";
+
+                // Menyiapkan elemen UI progress bar
+                for (let i = 0; i < maxPredictions; i++) {
+                    const item = document.createElement("div");
+                    item.className = "label-item";
+                    item.innerHTML = `
+                        <div class="label-header">
+                            <span class="label-name">--</span>
+                            <span class="label-percent">0%</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill"></div>
+                        </div>
+                    `;
+                    labelContainer.appendChild(item);
+                }
+
+                startBtn.innerHTML = `<i class="fa-solid fa-circle-dot"></i> Kamera Aktif`;
+                startBtn.style.background = "#334155";
+                isStarted = true;
+
+            } catch (error) {
+                console.error("Detail Error:", error);
+                alert("Gagal memuat model/kamera. Pastikan file model.json, metadata.json, dan weights.bin berada dalam folder 'models' serta izin kamera telah diberikan.");
+                startBtn.innerHTML = `<i class="fa-solid fa-video"></i> Coba Lagi`;
+                startBtn.disabled = false;
+            }
+        }
+
+        async function loop() {
+            webcam.update();
+            await predict();
+            animFrameId = window.requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            if (!model || !webcam) return;
+
+            const prediction = await model.predict(webcam.canvas);
+            
+            let highestProb = -1;
+            let highestClass = "";
+            let highestStyle = null;
+
+            for (let i = 0; i < maxPredictions; i++) {
+                const className = prediction[i].className;
+                const probability = prediction[i].probability;
+                const percentStr = (probability * 100).toFixed(1) + "%";
+
+                const style = getCategoryStyle(className);
+
+                // Cari prediksi tertinggi
+                if (probability > highestProb) {
+                    highestProb = probability;
+                    highestClass = className;
+                    highestStyle = style;
+                }
+
+                const item = labelContainer.children[i];
+                if (item) {
+                    const nameEl = item.querySelector(".label-name");
+                    const percentEl = item.querySelector(".label-percent");
+                    const barFillEl = item.querySelector(".progress-bar-fill");
+
+                    nameEl.innerHTML = `${style.icon} <span>${className}</span>`;
+                    percentEl.innerText = percentStr;
+                    barFillEl.style.width = percentStr;
+                    barFillEl.style.backgroundColor = style.color;
+                }
+            }
+
+            // Update Badge Terdeteksi Utama di Atas
+            const topResultEl = document.getElementById("top-result");
+            if (highestProb > 0.4) {
+                topResultEl.innerHTML = `${highestStyle.icon} ${highestClass}`;
+                topResultEl.style.color = highestStyle.color;
+            } else {
+                topResultEl.innerHTML = `<i class="fa-solid fa-circle-question"></i> Memindai...`;
+                topResultEl.style.color = "var(--text-muted)";
+            }
+        }
+    </script>
+</body>
+</html>
